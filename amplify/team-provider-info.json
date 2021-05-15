@@ -1,0 +1,20 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-weapp-dev-175840-authRole",
+      "UnauthRoleArn": "arn:aws:iam::707704252876:role/amplify-weapp-dev-175840-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::707704252876:role/amplify-weapp-dev-175840-authRole",
+      "Region": "ap-south-1",
+      "DeploymentBucketName": "amplify-weapp-dev-175840-deployment",
+      "UnauthRoleName": "amplify-weapp-dev-175840-unauthRole",
+      "StackName": "amplify-weapp-dev-175840",
+      "StackId": "arn:aws:cloudformation:ap-south-1:707704252876:stack/amplify-weapp-dev-175840/ee29f750-aff8-11eb-a362-021970b7345a",
+      "AmplifyAppId": "d38xgll44b7xq1"
+    },
+    "categories": {
+      "auth": {
+        "weappa00249ce": {}
+      }
+    }
+  }
+}
