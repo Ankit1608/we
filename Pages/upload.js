@@ -4,8 +4,6 @@ import {
   StyleSheet,
   Text,
   ScrollView,
-  Button,
-  Picker,
   TextInput,
   TouchableWithoutFeedback,
   TouchableNativeFeedback,
@@ -17,8 +15,24 @@ import {Formik} from 'formik';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import ImagePicker from 'react-native-image-crop-picker';
 import MaIcon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {Auth, API, graphqlOperation, Storage} from 'aws-amplify';
+import {createPost} from '../src/graphql/mutations';
+import moment from 'moment';
+import {useNavigation} from '@react-navigation/native';
+
+var unixtime = require('unixtime');
 
 const Upload = () => {
+  const formatFilename = filename => {
+    const date = moment().format('YYYYMMDD');
+    const randomString = Math.random().toString(36).substring(2, 7);
+    const cleanFileName = filename
+      .substring(filename.length, 15)
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-');
+    const newFilename = `images/${date}-${randomString}-${cleanFileName}`;
+    return newFilename.substring(0, 60);
+  };
   const uploadfromlib = () => {
     ImagePicker.openPicker({
       width: 300,
@@ -26,7 +40,8 @@ const Upload = () => {
       cropping: true,
     }).then(image => {
       console.log(image);
-      setImagePath(image.path);
+      setImage(image);
+      setPath(image.path);
       refRBSheet.current.close();
     });
   };
@@ -37,12 +52,14 @@ const Upload = () => {
       cropping: true,
     }).then(image => {
       console.log(image);
-      setImagePath(image.path);
+      setImagePath(image);
+      setPath(image.path);
       refRBSheet.current.close();
     });
   };
-  const [image, setImagePath] = useState(null);
-  const [selectedValue, setSelectedValue] = useState('Oxygen Cylinde');
+  const navigation = useNavigation();
+  const [image, setImage] = useState(null);
+  const [path, setPath] = useState(null);
   const refRBSheet = useRef();
 
   return (
@@ -50,9 +67,38 @@ const Upload = () => {
       <ScrollView>
         <View style={styles.logincontainer}>
           <Formik
-            initialValues={{email: '', description: ''}}
+            initialValues={{description: ''}}
             onSubmit={async values => {
-              () => console.log(values);
+              var filename;
+              if (image) {
+                const photoResponse = await fetch(image.path);
+                const blob = await photoResponse.blob();
+                filename = formatFilename(image.path);
+                console.log('image' + image);
+                console.log(filename);
+                await Storage.put(filename, blob, {
+                  contentType: image.mime,
+                });
+              }
+              try {
+                const user = await Auth.currentAuthenticatedUser();
+                await API.graphql(
+                  graphqlOperation(createPost, {
+                    input: {
+                      address: 'RTA, Khairtabad, Hyderabad',
+                      description: values.description,
+                      latitude: 17.385,
+                      longitude: 78.4867,
+                      userID: user.attributes.sub,
+                      username: user.username,
+                      image: image ? filename : '',
+                    },
+                  }),
+                );
+                navigation.navigate('Profile');
+              } catch (err) {
+                console.log(err);
+              }
             }}>
             {({handleChange, handleBlur, handleSubmit, values}) => (
               <View>
@@ -61,7 +107,7 @@ const Upload = () => {
                   <View style={styles.uploadphoto}>
                     {image != null && (
                       <ImageBackground
-                        source={{uri: image}}
+                        source={{uri: path}}
                         style={{flex: 1}}></ImageBackground>
                     )}
                     {image === null && (
@@ -86,7 +132,9 @@ const Upload = () => {
                   value={values.description}
                 />
                 <View>
-                  <Pressable style={styles.proceedButton}>
+                  <Pressable
+                    style={styles.proceedButton}
+                    onPress={handleSubmit}>
                     <Text style={styles.searchButtonText}>Proceed</Text>
                   </Pressable>
                 </View>

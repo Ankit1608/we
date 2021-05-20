@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useCallback, useEffect} from 'react';
 import {
   Alert,
   StyleSheet,
@@ -11,24 +11,33 @@ import {
   Pressable,
   Modal,
 } from 'react-native';
+import {Auth, API, graphqlOperation, Storage} from 'aws-amplify';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Entypo from 'react-native-vector-icons/Entypo';
+import {
+  createDownvote,
+  createUpvote,
+  deleteDownvote,
+  deleteUpvote,
+} from '../../src/graphql/mutations';
 const Post = ({
   index,
   postId,
   userId,
-  gender,
   description,
   navigation,
   author,
+  address,
+  location,
   category,
   created,
   imgurl,
-  votes,
+  upvotes,
+  downvotes,
   deleteButton,
-  deletePost,
 }) => {
+  const votes = 10;
   const [textShown, setTextShown] = useState(false); //To show ur remaining Text
   const [lengthMore, setLengthMore] = useState(false); //to show the "Read more & Less Line"
   const [votestate, setVoteState] = useState(votes);
@@ -37,6 +46,116 @@ const Post = ({
   const [bookmark, setBookMark] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalVisible2, setModalVisible2] = useState(false);
+  const [imageSource, setImageSource] = useState(null);
+  const [up, setUp] = useState(null);
+  const [down, setDown] = useState(null);
+  const [user, setUser] = useState(null);
+  const [voteCount, setVoteCount] = useState(
+    upvotes.items.length - downvotes.items.length,
+  );
+  console.log('this' + upvotes.items);
+  const submitUpvote = async () => {
+    const upvotes = {
+      userID: user.attributes.sub,
+      postID: postId,
+    };
+    try {
+      const res = await API.graphql(
+        graphqlOperation(createUpvote, {input: upvotes}),
+      );
+      setUp(res.data.createUpvote);
+      setVoteCount(voteCount + 1);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  const submitDownvote = async () => {
+    const downvotes = {
+      userID: user.attributes.sub,
+      postID: postId,
+    };
+    try {
+      const res = await API.graphql(
+        graphqlOperation(createDownvote, {input: downvotes}),
+      );
+      setDown(res.data.createDownvote);
+      setVoteCount(voteCount - 1);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  const removeUpvote = async () => {
+    try {
+      await API.graphql(graphqlOperation(deleteUpvote, {input: {id: up.id}}));
+      setVoteCount(voteCount - 1);
+      setUp(null);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  const removeDownvote = async () => {
+    try {
+      await API.graphql(
+        graphqlOperation(deleteDownvote, {input: {id: down.id}}),
+      );
+      setVoteCount(voteCount + 1);
+      setDown(null);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  const onUpvote = async () => {
+    if (!user) {
+      return;
+    }
+    if (!up) {
+      if (down) {
+        await removeDownvote();
+      }
+      await submitUpvote();
+    } else {
+      await removeUpvote();
+    }
+  };
+  const onDownvote = async () => {
+    if (!user) {
+      return;
+    }
+    if (!down) {
+      if (up) {
+        await removeUpvote();
+      }
+      await submitDownvote();
+    } else {
+      await removeDownvote();
+    }
+  };
+  const getImage = async () => {
+    try {
+      const imageURL = await Storage.get(imgurl);
+      setImageSource({
+        uri: imageURL,
+      });
+    } catch (e) {
+      console.log(e);
+    }
+  };
+  useEffect(() => {
+    const fetchUser = async () => {
+      const currentUser = await Auth.currentAuthenticatedUser();
+      setUser(currentUser);
+      const searchedUpvote = upvotes.items.find(
+        up => up.userID === currentUser.attributes.sub,
+      );
+      setUp(searchedUpvote);
+      const searchedDownvote = downvotes.items.find(
+        down => down.userID === currentUser.attributes.sub,
+      );
+      setDown(searchedDownvote);
+    };
+    getImage();
+    fetchUser();
+  }, []);
 
   const toggleNumberOfLines = () => {
     //To toggle the show text or hide it
@@ -86,11 +205,9 @@ const Post = ({
             <Icon name={'person'} size={30} />
           </View>
           <View>
-            <Text style={{fontSize: 12, color: 'gray'}}>@AnkitKumar</Text>
-            <Text style={{fontSize: 14, marginTop: 1}}>
-              12:30PM, 23 April 2020
-            </Text>
-            <Text style={{fontSize: 14, marginTop: 1}}>RTA, Khairtabad</Text>
+            <Text style={{fontSize: 12, color: 'gray'}}>@{author}</Text>
+            <Text style={{fontSize: 14, marginTop: 1}}>{created}</Text>
+            <Text style={{fontSize: 14, marginTop: 1}}>{address}</Text>
           </View>
         </View>
         <Pressable onPress={() => setModalVisible(true)}>
@@ -98,34 +215,35 @@ const Post = ({
         </Pressable>
       </View>
       <View style={styles.postcontainer}>
-        <Image
-          style={{height: '100%', width: '100%'}}
-          source={{
-            uri: 'https://picsum.photos/200/300',
-          }}
-        />
+        {imageSource && (
+          <Image source={imageSource} style={{height: '100%', width: '100%'}} />
+        )}
       </View>
       <View style={styles.footerContainer}>
         <View style={styles.footerSubContainer}>
           <View style={{flexDirection: 'row', alignItems: 'center'}}>
-            <TouchableWithoutFeedback onPress={upvote}>
+            <TouchableWithoutFeedback onPress={onUpvote}>
               <MaIcon
                 name={'arrow-up-bold'}
                 size={25}
-                color={`${upvotecolor}`}
+                color={up ? '#1e6485' : 'gray'}
               />
             </TouchableWithoutFeedback>
-            <Text style={{marginRight: 5}}>{votestate} </Text>
-            <TouchableWithoutFeedback onPress={downvote}>
+            <Text style={{marginRight: 5}}>{voteCount} </Text>
+            <TouchableWithoutFeedback onPress={onDownvote}>
               <MaIcon
                 name={'arrow-down-bold'}
                 size={25}
-                color={`${downvotecolor}`}
+                color={down ? '#1e6485' : 'gray'}
               />
             </TouchableWithoutFeedback>
             <Pressable
               onPress={() => {
-                navigation.navigate('Map');
+                console.warn(location);
+                navigation.navigate('Map', {
+                  lat: location.latitude,
+                  long: location.longitude,
+                });
               }}
               style={{
                 flexDirection: 'row',

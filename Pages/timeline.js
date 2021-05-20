@@ -12,7 +12,6 @@ import {
   Pressable,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-
 import Card from './components/card';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
@@ -46,26 +45,6 @@ export default function Timeline() {
           }}>
           <Text style={styles.buttonText}>ADD</Text>
         </Pressable>
-        <View style={{marginTop: 20}}>
-          <Card
-            navigation={navigation}
-            title="Netflix"
-            subtitle="A Platform to watch movies"
-            rating="3.5"
-            votes={10}
-            image={require('./assets/demo.png')}
-          />
-        </View>
-        <View style={{marginTop: 20}}>
-          <Card
-            navigation={navigation}
-            title="Netflix"
-            subtitle="A Platform to watch movies"
-            rating="3.5"
-            votes={10}
-            image={require('./assets/demo.png')}
-          />
-        </View>
       </ScrollView>
     </SafeAreaView>
   );

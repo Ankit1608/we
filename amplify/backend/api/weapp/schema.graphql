@@ -1,0 +1,43 @@
+type User @model {
+  id: ID!
+  username: String!
+  name: String!
+  email: String!
+  image: String
+  posts: [Post] @connection(keyName: "byUser", fields: ["id"])
+}
+
+type Post @model @key(name: "byUser", fields: ["userID"]) {
+  id: ID!
+  userID: ID!
+  username: String!
+  description: String!
+  address: String!
+  image: String!
+  longitude: Float!
+  latitude: Float!
+  user: User @connection(fields: ["userID"])
+  upvotes: [Upvote] @connection(keyName: "byPost", fields: ["id"])
+  downvotes: [Downvote] @connection(keyName: "byPost", fields: ["id"])
+}
+
+type Upvote
+  @model(queries: null)
+  @key(name: "byUser", fields: ["userID", "postID"])
+  @key(name: "byPost", fields: ["postID", "userID"]) {
+  id: ID!
+  userID: ID!
+  postID: ID!
+  user: User! @connection(fields: ["userID"])
+  post: Post! @connection(fields: ["postID"])
+}
+type Downvote
+  @model(queries: null)
+  @key(name: "byUser", fields: ["userID", "postID"])
+  @key(name: "byPost", fields: ["postID", "userID"]) {
+  id: ID!
+  userID: ID!
+  postID: ID!
+  user: User! @connection(fields: ["userID"])
+  post: Post! @connection(fields: ["postID"])
+}

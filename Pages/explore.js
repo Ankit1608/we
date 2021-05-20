@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   StyleSheet,
@@ -8,12 +8,31 @@ import {
   Modal,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-
 import MaIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Card from './components/card';
+import {listPosts} from '../src/graphql/queries';
+import {API} from 'aws-amplify';
+
 const Explore = props => {
-  const [sorterModal, setSorterModal] = useState(false);
   const navigation = useNavigation();
+  const [sorterModal, setSorterModal] = useState(false);
+  const [posts, setPosts] = useState([]);
+  const fetchProducts = async () => {
+    try {
+      const posts = await API.graphql({query: listPosts});
+      if (posts.data.listPosts) {
+        console.log('Products: \n');
+        console.log(posts);
+        setPosts(posts.data.listPosts.items);
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   return (
     <View>
@@ -38,38 +57,22 @@ const Explore = props => {
             </Pressable>
           </View>
         </View>
-        <Card
-          navigation={navigation}
-          gender={0}
-          username={'ankit'}
-          district={'abc'}
-          state={'telang'}
-          img={'https://picsum.photos/200/300'}
-          description={
-            'kdknkfkdnngknsdlnnsdjfjfnasknfdnadskljnflkndsaklnfklasdngknkladsnglnlknlkgnksdngknkladnkndslkng;kgdngknsdkngknankmnknknkjasnkj   hjhj   uhj   nkjnknakj qnki5hjbbjhbjbjbnbkjhbhjbhjbhjbhjbbhjbhjbjhbhjbjhbhjbhbhj'
-          }
-          votes={10}></Card>
-        <Card
-          navigation={navigation}
-          gender={0}
-          username={'ankit'}
-          district={'abc'}
-          state={'telang'}
-          img={'https://picsum.photos/200/300'}
-          description={
-            'kdknkfkdnngknsdlnnsdjfjfnasknfdnadskljnflkndsaklnfklasdngknkladsnglnlknlkgnksdngknkladnkndslkng;kgdngknsdkngknankmnknknkjasnkj   hjhj   uhj   nkjnknakj qnki5hjbbjhbjbjbnbkjhbhjbhjbhjbhjbbhjbhjbjhbhjbjhbhjbhbhj'
-          }
-          votes={10}></Card>
-        <Card
-          gender={0}
-          username={'ankit'}
-          district={'abc'}
-          state={'telang'}
-          img={'https://picsum.photos/200/300'}
-          description={
-            'kdknkfkdnngknsdlnnsdjfjfnasknfdnadskljnflkndsaklnfklasdngknkladsnglnlknlkgnksdngknkladnkndslkng;kgdngknsdkngknankmnknknkjasnkj   hjhj   uhj   nkjnknakj qnki5hjbbjhbjbjbnbkjhbhjbhjbhjbhjbbhjbhjbjhbhjbjhbhjbhbhj'
-          }
-          votes={10}></Card>
+        {posts.map((d, index) => (
+          <Card
+            navigation={navigation}
+            postId={d.id}
+            index={index}
+            userId={d.userid}
+            author={d.username}
+            address={d.address}
+            category={d.category}
+            imgurl={d.image}
+            created={d.dateTime}
+            location={d.location}
+            description={d.description}
+            upvotes={d.upvotes}
+            downvotes={d.downvotes}></Card>
+        ))}
         <View>
           <Modal
             animationType="slide"
